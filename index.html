@@ -7,18 +7,104 @@
     <style>
         body {
             font-family: Arial, sans-serif;
+            background-color: #1a1a1a;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
         }
-        table, th, td {
-            border: 1px solid black;
-            border-collapse: collapse;
-            padding: 8px;
-            text-align: center;
+
+        h2 {
+            color: #ffcc00;
         }
+
+        form {
+            background-color: #333333;
+            border-radius: 8px;
+            padding: 20px;
+            width: 100%;
+            max-width: 600px;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.5);
+            margin-bottom: 20px;
+        }
+
+        label, input, button, select {
+            display: block;
+            width: 100%;
+            margin-bottom: 10px;
+            color: #ffffff;
+        }
+
+        input, select, button {
+            padding: 10px;
+            font-size: 1rem;
+            border-radius: 4px;
+            border: 1px solid #ffcc00;
+            background-color: #444444;
+            color: #ffffff;
+            transition: 0.3s ease;
+        }
+
+        input:focus, select:focus {
+            border-color: #ff9900;
+            outline: none;
+        }
+
+        button {
+            background-color: #ff9900;
+            color: #1a1a1a;
+            cursor: pointer;
+            border: none;
+        }
+
+        button:hover {
+            background-color: #ffcc00;
+            box-shadow: 0px 4px 8px rgba(255, 204, 0, 0.3);
+        }
+
         table {
             width: 100%;
+            max-width: 800px;
+            background-color: #2a2a2a;
+            border-collapse: collapse;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.5);
         }
+
+        th, td {
+            padding: 12px 20px;
+            text-align: center;
+            transition: background-color 0.3s;
+        }
+
         th {
-            background-color: #f2f2f2;
+            background-color: #ff9900;
+            color: #1a1a1a;
+            font-weight: bold;
+        }
+
+        tr:nth-child(even) {
+            background-color: #333333;
+        }
+
+        tr:hover {
+            background-color: #ffcc00;
+            color: #1a1a1a;
+        }
+
+        td {
+            border-bottom: 1px solid #444444;
+        }
+
+        td:last-child, th:last-child {
+            border-right: none;
+        }
+
+        th, td {
+            border-right: 1px solid #444444;
         }
     </style>
 </head>
@@ -35,6 +121,12 @@
 
     <label for="perimeter">Perímetro (m):</label>
     <input type="number" id="perimeter" step="0.01" required>
+
+    <label for="tueDevice">TUE - Aparelho:</label>
+    <input type="text" id="tueDevice" placeholder="Ex: Ar-condicionado, Chuveiro">
+
+    <label for="tuePower">TUE - Potência (W):</label>
+    <input type="number" id="tuePower" step="10" placeholder="Ex: 1000">
 
     <button type="button" onclick="addRoom()">Adicionar Cômodo</button>
 </form>
@@ -58,32 +150,30 @@
 
 <script>
     function calculateLightingLoad(area) {
-        // Critério de cálculo de iluminação
         if (area <= 6) {
-            return 100; // Mínimo de 100 VA para área até 6 m²
+            return 100;
         } else {
             const extraArea = area - 6;
             const additionalLoad = Math.floor(extraArea / 4) * 60;
-            return 100 + additionalLoad; // 100 VA + 60 VA por 4 m² adicionais
+            return 100 + additionalLoad;
         }
     }
 
     function calculateTUGPoints(perimeter, roomName) {
         if (roomName.toLowerCase().includes("banheiro")) {
-            return 1; // Banheiros precisam de pelo menos uma tomada junto ao lavatório
+            return Math.ceil(perimeter / 5);
         } else if (roomName.toLowerCase().includes("cozinha") || roomName.toLowerCase().includes("área de serviço") || roomName.toLowerCase().includes("lavanderia")) {
-            return Math.ceil(perimeter / 3.5); // Mínimo de 1 ponto a cada 3,5 metros
+            return Math.ceil(perimeter / 3.5);
         } else {
-            return perimeter <= 6 ? 1 : Math.ceil(perimeter / 5); // Mínimo de 1 ponto para perímetro ≤ 6 m, ou 1 ponto a cada 5 metros
+            return perimeter <= 6 ? 1 : Math.ceil(perimeter / 5);
         }
     }
 
     function calculateTUGLoad(points, roomName) {
         if (roomName.toLowerCase().includes("banheiro") || roomName.toLowerCase().includes("cozinha") || roomName.toLowerCase().includes("área de serviço") || roomName.toLowerCase().includes("lavanderia")) {
-            // Critério especial para banheiros, cozinhas e áreas de serviço
             return points <= 3 ? points * 600 : 1800 + (points - 3) * 100;
         } else {
-            return points * 100; // Demais cômodos, 100 VA por ponto
+            return points * 100;
         }
     }
 
@@ -92,35 +182,13 @@
         const area = parseFloat(document.getElementById("area").value);
         const perimeter = parseFloat(document.getElementById("perimeter").value);
 
-        // Cálculos para Iluminação
         const iluminação = calculateLightingLoad(area);
-
-        // Cálculos para TUG
         const pontosTUG = calculateTUGPoints(perimeter, roomName);
         const cargaTUG = calculateTUGLoad(pontosTUG, roomName);
 
-        // Simulação de aparelhos para TUE com base no nome do cômodo
-        let aparelhoTUE = "Nenhum";
-        let potenciaTUE = 0;
+        const aparelhoTUE = document.getElementById("tueDevice").value || "Nenhum";
+        const potenciaTUE = parseFloat(document.getElementById("tuePower").value) || 0;
 
-        if (roomName.toLowerCase().includes("dormitório")) {
-            aparelhoTUE = "Ar-condicionado";
-            potenciaTUE = 1000;
-        } else if (roomName.toLowerCase().includes("banheiro")) {
-            aparelhoTUE = "Chuveiro";
-            potenciaTUE = 4400;
-        } else if (roomName.toLowerCase().includes("cozinha")) {
-            aparelhoTUE = "Forno Elétrico";
-            potenciaTUE = 600;
-        } else if (roomName.toLowerCase().includes("sala")) {
-            aparelhoTUE = "Ar-condicionado";
-            potenciaTUE = 1000;
-        } else if (roomName.toLowerCase().includes("serviços")) {
-            aparelhoTUE = "Ferro Elétrico";
-            potenciaTUE = 1100;
-        }
-
-        // Adiciona a linha na tabela
         const table = document.getElementById("electricTable").getElementsByTagName("tbody")[0];
         const newRow = table.insertRow();
 
@@ -133,7 +201,6 @@
         newRow.insertCell(6).textContent = aparelhoTUE;
         newRow.insertCell(7).textContent = potenciaTUE;
 
-        // Limpa o formulário
         document.getElementById("roomForm").reset();
     }
 </script>
