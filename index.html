@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tabela Automática de Cargas Elétricas</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        table, th, td {
+            border: 1px solid black;
+            border-collapse: collapse;
+            padding: 8px;
+            text-align: center;
+        }
+        table {
+            width: 100%;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+
+<h2>Tabela de Cálculo de Cargas Elétricas</h2>
+
+<form id="roomForm">
+    <label for="room">Nome do Cômodo:</label>
+    <input type="text" id="room" required>
+
+    <label for="area">Área (m²):</label>
+    <input type="number" id="area" step="0.01" required>
+
+    <label for="perimeter">Perímetro (m):</label>
+    <input type="number" id="perimeter" step="0.01" required>
+
+    <button type="button" onclick="addRoom()">Adicionar Cômodo</button>
+</form>
+
+<table id="electricTable">
+    <thead>
+        <tr>
+            <th>Cômodo</th>
+            <th>Área (m²)</th>
+            <th>Perímetro (m)</th>
+            <th>Iluminação (VA)</th>
+            <th>TUG - Pontos</th>
+            <th>TUG - Carga Total (VA)</th>
+            <th>TUE - Aparelho</th>
+            <th>TUE - Potência (W)</th>
+        </tr>
+    </thead>
+    <tbody>
+    </tbody>
+</table>
+
+<script>
+    function calculateLightingLoad(area) {
+        // Critério de cálculo de iluminação
+        if (area <= 6) {
+            return 100; // Mínimo de 100 VA para área até 6 m²
+        } else {
+            const extraArea = area - 6;
+            const additionalLoad = Math.floor(extraArea / 4) * 60;
+            return 100 + additionalLoad; // 100 VA + 60 VA por 4 m² adicionais
+        }
+    }
+
+    function calculateTUGPoints(perimeter, roomName) {
+        if (roomName.toLowerCase().includes("banheiro")) {
+            return 1; // Banheiros precisam de pelo menos uma tomada junto ao lavatório
+        } else if (roomName.toLowerCase().includes("cozinha") || roomName.toLowerCase().includes("área de serviço") || roomName.toLowerCase().includes("lavanderia")) {
+            return Math.ceil(perimeter / 3.5); // Mínimo de 1 ponto a cada 3,5 metros
+        } else {
+            return perimeter <= 6 ? 1 : Math.ceil(perimeter / 5); // Mínimo de 1 ponto para perímetro ≤ 6 m, ou 1 ponto a cada 5 metros
+        }
+    }
+
+    function calculateTUGLoad(points, roomName) {
+        if (roomName.toLowerCase().includes("banheiro") || roomName.toLowerCase().includes("cozinha") || roomName.toLowerCase().includes("área de serviço") || roomName.toLowerCase().includes("lavanderia")) {
+            // Critério especial para banheiros, cozinhas e áreas de serviço
+            return points <= 3 ? points * 600 : 1800 + (points - 3) * 100;
+        } else {
+            return points * 100; // Demais cômodos, 100 VA por ponto
+        }
+    }
+
+    function addRoom() {
+        const roomName = document.getElementById("room").value;
+        const area = parseFloat(document.getElementById("area").value);
+        const perimeter = parseFloat(document.getElementById("perimeter").value);
+
+        // Cálculos para Iluminação
+        const iluminação = calculateLightingLoad(area);
+
+        // Cálculos para TUG
+        const pontosTUG = calculateTUGPoints(perimeter, roomName);
+        const cargaTUG = calculateTUGLoad(pontosTUG, roomName);
+
+        // Simulação de aparelhos para TUE com base no nome do cômodo
+        let aparelhoTUE = "Nenhum";
+        let potenciaTUE = 0;
+
+        if (roomName.toLowerCase().includes("dormitório")) {
+            aparelhoTUE = "Ar-condicionado";
+            potenciaTUE = 1000;
+        } else if (roomName.toLowerCase().includes("banheiro")) {
+            aparelhoTUE = "Chuveiro";
+            potenciaTUE = 4400;
+        } else if (roomName.toLowerCase().includes("cozinha")) {
+            aparelhoTUE = "Forno Elétrico";
+            potenciaTUE = 600;
+        } else if (roomName.toLowerCase().includes("sala")) {
+            aparelhoTUE = "Ar-condicionado";
+            potenciaTUE = 1000;
+        } else if (roomName.toLowerCase().includes("serviços")) {
+            aparelhoTUE = "Ferro Elétrico";
+            potenciaTUE = 1100;
+        }
+
+        // Adiciona a linha na tabela
+        const table = document.getElementById("electricTable").getElementsByTagName("tbody")[0];
+        const newRow = table.insertRow();
+
+        newRow.insertCell(0).textContent = roomName;
+        newRow.insertCell(1).textContent = area.toFixed(2);
+        newRow.insertCell(2).textContent = perimeter.toFixed(2);
+        newRow.insertCell(3).textContent = iluminação.toFixed(2);
+        newRow.insertCell(4).textContent = pontosTUG;
+        newRow.insertCell(5).textContent = cargaTUG;
+        newRow.insertCell(6).textContent = aparelhoTUE;
+        newRow.insertCell(7).textContent = potenciaTUE;
+
+        // Limpa o formulário
+        document.getElementById("roomForm").reset();
+    }
+</script>
+
+</body>
+</html>
